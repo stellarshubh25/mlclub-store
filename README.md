@@ -1,8 +1,6 @@
 # ML Club Store
 
-A small e-commerce site for selling ML Club merchandise: browse products, check out,
-verify your email with an OTP, "pay" (simulated), and look up order history.
-
+E-commerce site for selling ML Club merchandise.
 ## Stack
 
 - **Backend:** Node.js + Express
