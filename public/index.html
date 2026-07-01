@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ML Club Store</title>
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+<header class="site-header">
+  <div class="inner">
+    <a href="/" class="brand">
+      <span class="mark">ML//</span>
+      <span class="name">Club Store</span>
+    </a>
+    <nav class="header-nav">
+      <a href="/orders.html">Order history</a>
+      <a href="/cart.html" class="cart-pill">Cart (<span id="cart-count">0</span>)</a>
+    </nav>
+  </div>
+</header>
+
+<div class="hero">
+  <div class="wrap" style="padding-bottom:0;">
+    <div class="eyebrow">MLC / merch-drop-01</div>
+    <h1>Wear the model.<br>Ship the merch.</h1>
+    <p>Official ML Club apparel and accessories, designed by the club for the club. Every order funds our next hackathon.</p>
+  </div>
+</div>
+
+<main class="wrap">
+  <h2 class="section-title">Catalogue <span class="count" id="product-count"></span></h2>
+  <div class="grid" id="product-grid">
+    <p class="empty-state">Loading products…</p>
+  </div>
+</main>
+
+<footer>ML Club Store — built by students, for students.</footer>
+
+<script src="/js/cart.js"></script>
+<script>
+async function loadProducts() {
+  const grid = document.getElementById("product-grid");
+  try {
+    const res = await fetch("/api/products");
+    const data = await res.json();
+    const products = data.products || [];
+    document.getElementById("product-count").textContent = `(${products.length})`;
+
+    if (products.length === 0) {
+      grid.innerHTML = `<p class="empty-state">No products available right now.</p>`;
+      return;
+    }
+
+    grid.innerHTML = products.map(p => `
+      <div class="card">
+        <div class="thumb"></div>
+        <div class="body">
+          <span class="sku">${p.sku}</span>
+          <h3>${escapeHtml(p.name)}</h3>
+          <p class="desc">${escapeHtml(p.description)}</p>
+          <div class="spec-strip">
+            <span class="price">${p.price.toFixed(2)}</span>
+            <button class="btn small" onclick="quickAdd('${p.id}', this)">Add to cart</button>
+          </div>
+        </div>
+      </div>
+    `).join("");
+
+    // set images (avoids fetch race / keeps template simple above)
+    products.forEach((p, i) => {
+      const thumb = grid.children[i].querySelector(".thumb");
+      thumb.innerHTML = `<img src="${p.image}" alt="${escapeHtml(p.name)}" width="200" height="200">`;
+    });
+  } catch (err) {
+    grid.innerHTML = `<p class="empty-state">Couldn't load products. Is the server running?</p>`;
+  }
+}
+
+function escapeHtml(str) {
+  const div = document.createElement("div");
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+function quickAdd(id, btn) {
+  addToCart(id, 1);
+  const original = btn.textContent;
+  btn.textContent = "Added ✓";
+  btn.disabled = true;
+  setTimeout(() => { btn.textContent = original; btn.disabled = false; }, 900);
+}
+
+loadProducts();
+</script>
+</body>
+</html>

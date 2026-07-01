@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Verify email — ML Club Store</title>
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+<header class="site-header">
+  <div class="inner">
+    <a href="/" class="brand">
+      <span class="mark">ML//</span>
+      <span class="name">Club Store</span>
+    </a>
+    <nav class="header-nav">
+      <a href="/orders.html">Order history</a>
+      <a href="/cart.html" class="cart-pill">Cart (<span id="cart-count">0</span>)</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="step-track">
+    <span class="step"><span class="dot"></span>Delivery details</span>
+    <span class="sep"></span>
+    <span class="step active"><span class="dot"></span>Verify email</span>
+    <span class="sep"></span>
+    <span class="step"><span class="dot"></span>Payment</span>
+  </div>
+
+  <div class="center-panel">
+    <h2 class="section-title" style="justify-content:center;">Check your inbox</h2>
+    <p style="color:var(--muted);" id="sent-to-text">We sent a 6-digit code to your email.</p>
+
+    <form id="otp-form">
+      <div class="otp-boxes">
+        <input type="text" inputmode="numeric" maxlength="1" class="otp-digit">
+        <input type="text" inputmode="numeric" maxlength="1" class="otp-digit">
+        <input type="text" inputmode="numeric" maxlength="1" class="otp-digit">
+        <input type="text" inputmode="numeric" maxlength="1" class="otp-digit">
+        <input type="text" inputmode="numeric" maxlength="1" class="otp-digit">
+        <input type="text" inputmode="numeric" maxlength="1" class="otp-digit">
+      </div>
+      <p class="error-text" id="error-text"></p>
+      <button type="submit" class="btn accent block" id="verify-btn">Verify & continue</button>
+    </form>
+    <p style="margin-top:16px;">
+      <a href="#" id="resend-link" style="font-family:var(--font-mono);font-size:13px;">Resend code</a>
+    </p>
+  </div>
+</main>
+
+<footer>ML Club Store — built by students, for students.</footer>
+
+<script src="/js/cart.js"></script>
+<script>
+const email = sessionStorage.getItem("mlclub_checkout_email");
+if (!email) window.location.href = "/checkout.html";
+document.getElementById("sent-to-text").textContent = `We sent a 6-digit code to ${email}.`;
+
+const devOtp = sessionStorage.getItem("mlclub_dev_otp");
+if (devOtp) {
+  document.getElementById("sent-to-text").innerHTML += `<br><span style="font-family:var(--font-mono);color:var(--blue);">[Dev mode — no SMTP configured] Your code: <strong>${devOtp}</strong></span>`;
+}
+
+const digits = Array.from(document.querySelectorAll(".otp-digit"));
+digits[0].focus();
+digits.forEach((input, idx) => {
+  input.addEventListener("input", () => {
+    input.value = input.value.replace(/[^0-9]/g, "");
+    if (input.value && idx < digits.length - 1) digits[idx + 1].focus();
+  });
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Backspace" && !input.value && idx > 0) digits[idx - 1].focus();
+  });
+  input.addEventListener("paste", (e) => {
+    e.preventDefault();
+    const text = (e.clipboardData.getData("text") || "").replace(/[^0-9]/g, "").slice(0, 6);
+    text.split("").forEach((ch, i) => { if (digits[i]) digits[i].value = ch; });
+    digits[Math.min(text.length, digits.length) - 1]?.focus();
+  });
+});
+
+const form = document.getElementById("otp-form");
+const errorText = document.getElementById("error-text");
+const verifyBtn = document.getElementById("verify-btn");
+
+form.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const otp = digits.map(d => d.value).join("");
+  if (otp.length !== 6) {
+    errorText.textContent = "Enter all 6 digits.";
+    return;
+  }
+  errorText.textContent = "";
+  verifyBtn.disabled = true;
+  verifyBtn.innerHTML = `<span class="spinner"></span> Verifying…`;
+
+  try {
+    const res = await fetch("/api/otp/verify", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, otp }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Verification failed.");
+
+    sessionStorage.setItem("mlclub_order_id", data.orderId);
+    sessionStorage.removeItem("mlclub_dev_otp");
+    window.location.href = "/payment.html";
+  } catch (err) {
+    errorText.textContent = err.message;
+    verifyBtn.disabled = false;
+    verifyBtn.textContent = "Verify & continue";
+    digits.forEach(d => d.value = "");
+    digits[0].focus();
+  }
+});
+
+document.getElementById("resend-link").addEventListener("click", async (e) => {
+  e.preventDefault();
+  errorText.textContent = "Go back to checkout to request a new code.";
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Your Cart — ML Club Store</title>
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+<header class="site-header">
+  <div class="inner">
+    <a href="/" class="brand">
+      <span class="mark">ML//</span>
+      <span class="name">Club Store</span>
+    </a>
+    <nav class="header-nav">
+      <a href="/orders.html">Order history</a>
+      <a href="/cart.html" class="cart-pill">Cart (<span id="cart-count">0</span>)</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap" style="padding-top:32px;">
+  <h2 class="section-title">Your cart</h2>
+  <div class="checkout-layout">
+    <div class="panel" id="cart-list">
+      <p class="empty-state">Loading…</p>
+    </div>
+    <div class="panel">
+      <h3 style="margin-top:0;font-family:var(--font-display);">Order summary</h3>
+      <div id="summary-lines"></div>
+      <a class="btn accent block" id="checkout-btn" href="/checkout.html" style="margin-top:16px;">Proceed to checkout</a>
+      <a class="btn secondary block" href="/" style="margin-top:10px;">Continue shopping</a>
+    </div>
+  </div>
+</main>
+
+<footer>ML Club Store — built by students, for students.</footer>
+
+<script src="/js/cart.js"></script>
+<script>
+let productMap = {};
+
+async function render() {
+  const res = await fetch("/api/products");
+  const { products } = await res.json();
+  productMap = Object.fromEntries(products.map(p => [p.id, p]));
+
+  const cart = getCart();
+  const listEl = document.getElementById("cart-list");
+  const summaryEl = document.getElementById("summary-lines");
+  const checkoutBtn = document.getElementById("checkout-btn");
+
+  if (cart.length === 0) {
+    listEl.innerHTML = `<p class="empty-state">Your cart is empty.<br><br><a class="btn secondary" href="/">Browse the catalogue</a></p>`;
+    summaryEl.innerHTML = `<div class="summary-line total"><span>Total</span><span>₹0.00</span></div>`;
+    checkoutBtn.classList.add("btn-disabled");
+    checkoutBtn.style.pointerEvents = "none";
+    checkoutBtn.style.opacity = "0.4";
+    return;
+  }
+
+  checkoutBtn.style.pointerEvents = "";
+  checkoutBtn.style.opacity = "";
+
+  let total = 0;
+  listEl.innerHTML = cart.map(item => {
+    const p = productMap[item.id];
+    if (!p) return "";
+    const lineTotal = p.price * item.quantity;
+    total += lineTotal;
+    return `
+      <div class="cart-row">
+        <div class="thumb-sm"><img src="${p.image}" alt="" width="40" height="40"></div>
+        <div class="info">
+          <div class="name">${p.name}</div>
+          <div class="meta">₹${p.price.toFixed(2)} each</div>
+        </div>
+        <div class="qty-control">
+          <button onclick="changeQty('${p.id}', ${item.quantity - 1})">−</button>
+          <span>${item.quantity}</span>
+          <button onclick="changeQty('${p.id}', ${item.quantity + 1})">+</button>
+        </div>
+        <div class="price" style="width:80px;text-align:right;">${lineTotal.toFixed(2)}</div>
+        <button class="btn small secondary" onclick="removeItem('${p.id}')">Remove</button>
+      </div>
+    `;
+  }).join("");
+
+  summaryEl.innerHTML = `
+    <div class="summary-line"><span>Items</span><span>${cart.reduce((s,i)=>s+i.quantity,0)}</span></div>
+    <div class="summary-line total"><span>Total</span><span>₹${total.toFixed(2)}</span></div>
+  `;
+}
+
+function changeQty(id, qty) {
+  setQuantity(id, qty);
+  render();
+}
+function removeItem(id) {
+  removeFromCart(id);
+  render();
+}
+
+render();
+</script>
+</body>
+</html>

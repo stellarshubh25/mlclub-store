@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Order confirmed — ML Club Store</title>
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+<header class="site-header">
+  <div class="inner">
+    <a href="/" class="brand">
+      <span class="mark">ML//</span>
+      <span class="name">Club Store</span>
+    </a>
+    <nav class="header-nav">
+      <a href="/orders.html">Order history</a>
+      <a href="/cart.html" class="cart-pill">Cart (<span id="cart-count">0</span>)</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="center-panel" style="max-width:520px;">
+    <div class="icon-check">✓</div>
+    <h2 class="section-title" style="justify-content:center;">Order confirmed</h2>
+    <p style="color:var(--muted);">Thanks for the order! A confirmation has been sent to your email.</p>
+    <div class="panel" id="order-panel" style="text-align:left;margin-top:20px;">
+      <p class="empty-state">Loading order…</p>
+    </div>
+    <div style="display:flex;gap:12px;margin-top:20px;">
+      <a class="btn secondary block" href="/">Back to shop</a>
+      <a class="btn block" href="/orders.html">View order history</a>
+    </div>
+  </div>
+</main>
+
+<footer>ML Club Store — built by students, for students.</footer>
+
+<script src="/js/cart.js"></script>
+<script>
+const orderId = sessionStorage.getItem("mlclub_order_id");
+const panel = document.getElementById("order-panel");
+
+async function loadOrder() {
+  if (!orderId) {
+    panel.innerHTML = `<p class="empty-state">No recent order found.</p>`;
+    return;
+  }
+  const res = await fetch(`/api/orders/${orderId}`);
+  const data = await res.json();
+  if (!res.ok) {
+    panel.innerHTML = `<p class="empty-state">${data.error}</p>`;
+    return;
+  }
+  const { order, customer } = data;
+  panel.innerHTML = `
+    <div class="summary-line"><span>Order ID</span><span style="font-family:var(--font-mono);">${order.id}</span></div>
+    <div class="summary-line"><span>Payment ref</span><span style="font-family:var(--font-mono);">${order.payment_ref || '—'}</span></div>
+    <div class="summary-line"><span>Deliver to</span><span>${customer.name}</span></div>
+    <div class="summary-line"><span>Status</span><span class="badge green">paid</span></div>
+    <div style="border-top:1px dashed var(--line);margin:10px 0;"></div>
+    ${order.items.map(i => `
+      <div class="summary-line"><span>${i.name} × ${i.quantity}</span><span>₹${(i.price*i.quantity).toFixed(2)}</span></div>
+    `).join("")}
+    <div class="summary-line total"><span>Total paid</span><span>₹${order.total_amount.toFixed(2)}</span></div>
+  `;
+  sessionStorage.removeItem("mlclub_order_id");
+  sessionStorage.removeItem("mlclub_checkout_email");
+}
+
+loadOrder();
+</script>
+</body>
+</html>
